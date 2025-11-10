@@ -1,20 +1,8 @@
 {
-  "telegram_bot_token": "8114783573:AAGAJZ0C9GYoqWDU2gX4nbpZhWe89BMO7d4",
-  "telegram_chat_id": "6926777491",
-  "scan_interval": 10,
-  "filters": {
-    "min_trade_value_usd": 500,
-    "realized_pnl_pct": 20,
-    "realized_pnl_usd": 50,
-    "unrealized_pnl_pct": 30,
-    "unrealized_pnl_usd": 100,
-    "min_trades": 1
-  },
-  "token_addresses": [
-    "0xBeEB9B3cf5519f27B5C1F7fC1BcC5d88B0cD4444"
-  ],
-  "agent_port": 8787,
-  "agent_require_payment": false,
-  "agent_allowed_callers": [],
-  "agent_api_key": ""
+  "TELEGRAM_TOKEN": "7404930359:AAFBMfFIZUZuToI25LszgYcAlgdcYdWCLTo",
+  "API_ID": 24183504,
+  "API_HASH": "74ea207ec2bc912dc5c8264b0f20b79e",
+  "OWNER_ID": "6926777491",
+  "BOT_NAME": "x402_peeranky",
+  "MODE": "production"
 }
