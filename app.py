@@ -1,51 +1,40 @@
-from flask import Flask, request, jsonify
-import json, time, traceback
-from agent_server import analyze_fn, send_tg, append_log
+from flask import Flask, request
+import os
+import requests
 
 app = Flask(__name__)
 
-@app.route('/')
+# ==============================
+# Telegram Webhook + Handlers
+# ==============================
+
+def send_message(chat_id, text):
+    url = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_TOKEN')}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    requests.post(url, json=payload)
+
+@app.route('/', methods=['GET'])
 def home():
-    return jsonify({
-        "agent": "x402_peeranky",
-        "status": "online",
-        "time": int(time.time()),
-        "analyzer_available": analyze_fn is not None
-    })
+    return "🤖 Peetaskbot is alive!", 200
 
-@app.route('/invoke', methods=['POST'])
-def invoke():
-    try:
-        payload = request.get_json(force=True)
-        token = payload.get("token") or payload.get("ca")
-        notify = payload.get("notify", False)
+@app.route('/', methods=['POST'])
+def telegram_webhook():
+    data = request.get_json()
 
-        if not token:
-            return jsonify({"error": "token (contract address) required"}), 400
+    if data and "message" in data:
+        chat_id = data["message"]["chat"]["id"]
+        text = data["message"].get("text", "")
 
-        start = int(time.time())
-        result = analyze_fn(token)
-        invocation = {
-            "time": start,
-            "token": token,
-            "result": result,
-            "notify": notify,
-            "duration_s": int(time.time()) - start
-        }
-        append_log(invocation)
+        if text == "/start":
+            send_message(chat_id, "👋 Hey boss! Bot is live and ready for tasks.")
+        else:
+            send_message(chat_id, f"✅ Message received: {text}")
 
-        if notify:
-            try:
-                summary = str(result)[:800]
-                msg = f"🔔 *x402_peeranky*\nToken: `{token}`\nResult snippet:\n```\n{summary}\n```"
-                send_tg(msg)
-            except Exception as e:
-                print("[notify] error:", e)
+    return "ok", 200
 
-        return jsonify({"ok": True, "token": token, "result": result})
-    except Exception as e:
-        tb = traceback.format_exc()
-        return jsonify({"ok": False, "error": str(e), "trace": tb[:1000]}), 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8787)
+# ==============================
+# Run Flask
+# ==============================
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8787)
