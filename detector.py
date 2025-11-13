@@ -1,27 +1,29 @@
 import time
 import requests
 from datetime import datetime, timezone
+from conviction_alerts import alert_and_log
 from unified_analyzer import unified_analyze
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+from notifier import notify_new_token
+from conviction_memory import save_new_token, init_db
 
-def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
-    try:
-        requests.post(url, data=payload)
-    except Exception as e:
-        print(f"Telegram send error: {e}")
+# === Initialize Conviction DB ===
+print("🚀 Live Detector Started — tracking Base & Solana new pairs...\n")
+init_db()  # ✅ create DB table if not exist
 
+
+# === Fetch new token pairs from Dexscreener ===
 def fetch_new_pairs():
     url = "https://api.dexscreener.com/latest/dex/pairs"
     try:
-        res = requests.get(url)
+        res = requests.get(url, timeout=10)
         if res.status_code == 200:
             return res.json().get("pairs", [])
     except Exception as e:
         print(f"❌ Fetch error: {e}")
     return []
 
+
+# === Filter recent tokens (<= 30 mins old) ===
 def filter_recent_tokens(pairs):
     filtered = []
     now = datetime.now(timezone.utc)
@@ -38,19 +40,21 @@ def filter_recent_tokens(pairs):
         created_time = datetime.fromtimestamp(created_at_ms / 1000, tz=timezone.utc)
         minutes_old = (now - created_time).total_seconds() / 60
 
-        if minutes_old <= 30:  # Only tokens created within the last 30 mins
+        if minutes_old <= 30:  # new tokens only
             token = {
                 "chain": "base" if chain == "base" else "sol",
                 "ca": pair.get("baseToken", {}).get("address"),
                 "symbol": pair.get("baseToken", {}).get("symbol"),
+                "name": pair.get("baseToken", {}).get("name"),
+                "creator": pair.get("pairAddress", "Unknown"),
                 "dex": pair.get("dexId"),
                 "age": f"{round(minutes_old, 1)} mins ago"
             }
             filtered.append(token)
     return filtered
 
-print("🚀 Live Detector Started — tracking Base & Solana new pairs...\n")
 
+# === Main Live Scanner Loop ===
 known_tokens = set()
 
 while True:
@@ -61,9 +65,20 @@ while True:
         ca = token.get("ca")
         if ca and ca not in known_tokens:
             known_tokens.add(ca)
-            print(f"\n🔍 New Token Found on {token['chain'].upper()} — {token['symbol']} ({token['age']})")
+            chain = token["chain"]
+            print(f"\n🔍 New Token Found on {chain.upper()} — {token['symbol']} ({token['age']})")
+
+            # 🧠 Deep Analysis
             result = unified_analyze(token)
             print(result)
-            send_telegram_message(result)
 
-    time.sleep(90)  # Check every 1.5 minutes
+            # 💾 Save to conviction memory DB
+            save_new_token(result)
+
+            # 📡 Send alert to Telegram
+            notify_new_token(chain, token)
+
+            # 🚨 Trigger Conviction Alert System (logs + highlights top ones)
+            alert_and_log(result)
+
+    time.sleep(90)  # check every 1.5 minutes
