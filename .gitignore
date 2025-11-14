@@ -1,18 +1,14 @@
-rugbot_bot.session
-rugbot-bot.session
-session_files/
-
-# 🔒 Sensitive configs
-config.json
-*.session
-session_files/
-*.db
+# Sensitive agent files
 *.json
-
-# Logs
+*.db
+*.session
 *.log
 *.save
 
-# Python caches
+# Termux environment junk
 __pycache__/
 *.pyc
+
+# Local settings
+config.json
+session_files/
