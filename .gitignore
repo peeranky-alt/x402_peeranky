@@ -1,3 +1,18 @@
 rugbot_bot.session
 rugbot-bot.session
 session_files/
+
+# 🔒 Sensitive configs
+config.json
+*.session
+session_files/
+*.db
+*.json
+
+# Logs
+*.log
+*.save
+
+# Python caches
+__pycache__/
+*.pyc
